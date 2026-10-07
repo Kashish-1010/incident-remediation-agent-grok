@@ -1,4 +1,4 @@
-"""Command line entrypoint. The investigate agent is a later milestone."""
+"""Command line entrypoint. Patching and remediation are later milestones."""
 
 import argparse
 from pathlib import Path
@@ -12,7 +12,13 @@ def main(argv: list[str] | None = None) -> int:
     reproduce_parser = sub.add_parser("reproduce", help="Run the seeded double-debit capture and write the incident log")
     reproduce_parser.add_argument("--log", type=Path, default=None)
     sub.add_parser("check-key", help="Show whether XAI_API_KEY is loaded, without printing it or calling the API")
+    investigate_parser = sub.add_parser("investigate", help="Ingest an incident and ask Grok for a root cause")
+    investigate_parser.add_argument("incident", type=Path)
     args = parser.parse_args(argv)
+    if args.command == "investigate":
+        from ledger.agent.investigate import investigate
+
+        return investigate(args.incident)
     if args.command == "reproduce":
         from ledger.reproduce import DEFAULT_LOG, reproduce
 
