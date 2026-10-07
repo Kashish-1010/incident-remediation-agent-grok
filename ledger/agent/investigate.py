@@ -34,6 +34,7 @@ def investigate(
     client: GrokClient | None = None,
     repo_root: Path = ROOT,
     runs_root: Path | None = None,
+    continue_to_remediation: bool = False,
 ) -> int:
     if client is None and not api_key():
         print("XAI_API_KEY is not set. Copy .env.example to .env and set the variable there, or export it in the shell.")
@@ -54,8 +55,12 @@ def investigate(
     print(f"hypothesis: {result['hypothesis']}")
     print(f"confidence: {result['confidence']}")
     print(f"files: {', '.join(result['files'])}")
-    print(f"artifacts: {paths.run_dir}")
-    return 0
+    if not continue_to_remediation:
+        print(f"artifacts: {paths.run_dir}")
+        return 0
+    from ledger.agent.remediate import remediate
+
+    return remediate(paths, grok)
 
 
 def ingest(incident_path: Path, *, repo_root: Path, runs_root: Path) -> RunPaths:

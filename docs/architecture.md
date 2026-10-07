@@ -45,9 +45,9 @@ One process. Tests use FastAPI's `TestClient`. There is no worker, queue, databa
 | --- | --- | --- |
 | 1. Ingest | Code | Normalized incident and log slice |
 | 2. Investigate | One Grok call, up to 3 tool rounds | Root-cause JSON. The prompt already includes the log and `payments/store.py` |
-| 3. Test | The second Grok call returns both files. Code writes the test only | `tests/test_inc_1042.py`, then a pytest log that is expected to fail |
-| 4. Patch | Code writes the store file from that same response | Replaced `payments/store.py` |
-| 5. Verify | Code runs pytest | Second pytest log. No repair turn |
+| 3. Test | The next Grok call returns `tests/test_inc_1042.py` only | The test file, then `pytest-red.txt`. The patch call has not happened |
+| 4. Patch | A separate Grok call returns `payments/store.py` after the red log exists | `store.diff`. Skipped when the regression test does not fail |
+| 5. Verify | Code runs the full pytest suite | `pytest-green.txt` and `sequence.json`. No repair turn |
 | 6. Blast radius | Code | Changed files, and a fixed note that capture moves money |
 | 7. Report | Code fills a template. The third Grok call supplies the hypothesis paragraph | `report.md` |
 
@@ -61,9 +61,9 @@ All model traffic goes through `agent/grok_client.py`.
 
 - `POST https://api.x.ai/v1/responses` with `httpx`.
 - `Authorization: Bearer $XAI_API_KEY`. Model `grok-4.7`, overridable with `XAI_MODEL`.
-- Three calls per run. `previous_response_id` is used only for tool follow-ups inside investigate. The file call and the hypothesis call are new requests that include the saved artifact.
+- `previous_response_id` is used only for tool follow-ups inside investigate. The test call, the patch call, and the hypothesis call are new requests that include the saved artifact.
 - Investigate tools are local functions. When `output` contains `function_call` items, the orchestrator runs them and posts `function_call_output` with the same `call_id`.
-- The file call returns the full text of the two allowed files, not a unified diff.
+- The test call and the patch call each return one full file as JSON (`path` and `content`), not a unified diff. The patch call runs only after `pytest-red.txt` shows the new test failed.
 - Every request and response body is written under `runs/<run-id>/api/` before it is parsed.
 - A JSON body may be wrapped in a markdown fence. The client strips one fence and, if parsing still fails, re-asks once.
 - HTTP 401 fails immediately. HTTP 429, 5xx, and timeouts retry twice with backoff.
@@ -76,16 +76,16 @@ Server-side tools are not requested. The client does not stream.
 | Tool | Who may call it | Constraint |
 | --- | --- | --- |
 | `read_file`, `search`, `list_dir` | Grok, investigate phase only | Workspace plus the incident log. A path outside that returns an error tool result. |
-| File replace | Orchestrator, after the second Grok call | Only `payments/store.py` and `tests/test_inc_1042.py`. At most 150 changed lines against the original. |
+| File replace | Orchestrator | `tests/test_inc_1042.py` before the patch call. `payments/store.py` only after the red pytest log. At most 150 changed lines against the original. |
 | Pytest | Orchestrator | Subprocess `python -m pytest`, 60-second timeout. The model has no shell. |
 
 Tool rounds in investigate are capped at 3. Unknown tool names return an error result and do not touch the filesystem.
 
 ## Design decisions
 
-- **Three Grok calls.** Investigate, both files, and a short hypothesis. Blast radius and the report status come from code, so a live demo does not depend on extra calls or on the model declaring success.
+- **Test call, then patch call.** The fix is requested only after the regression test fails on the unpatched workspace. `sequence.json` is the red, patch, green record.
 - **Full-file replacements.** A unified diff is the usual way a model patch fails to apply. The tree is small enough to replace two files.
-- **Test, then patch.** The first pytest log shows the new test failing on the seeded bug. The second shows it passing. That is the acceptance check.
+- **Stop on a surprise result.** A regression test that passes before the patch, or a full suite that fails after it, ends the run as a failure.
 - **No repair turn.** A failed second pytest is the result. Another patch cycle is out of scope.
 - **HTTP, not an SDK.** Saved request and response bodies are the Grok boundary you can open during the walkthrough.
 - **Isolated workspace.** The seeded bug remains the starting point for every run.
