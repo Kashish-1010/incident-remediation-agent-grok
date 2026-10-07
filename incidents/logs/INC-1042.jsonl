@@ -1,0 +1,9 @@
+{"ts":"2026-10-07T05:46:48Z","event":"payment_created","payment_id":"pay_77045b6b","amount":2500}
+{"ts":"2026-10-07T05:46:48Z","event":"payment_authorized","payment_id":"pay_77045b6b"}
+{"ts":"2026-10-07T05:46:48Z","event":"capture_started","payment_id":"pay_77045b6b","idempotency_key":"idem_inc_1042","amount":2500}
+{"ts":"2026-10-07T05:46:48Z","event":"ledger_debit","payment_id":"pay_77045b6b","entry_id":"led_3a01f32a","amount":2500,"idempotency_key":"idem_inc_1042"}
+{"ts":"2026-10-07T05:46:48Z","event":"gateway_timeout","payment_id":"pay_77045b6b","idempotency_key":"idem_inc_1042","status_code":504}
+{"ts":"2026-10-07T05:46:48Z","event":"capture_started","payment_id":"pay_77045b6b","idempotency_key":"idem_inc_1042","amount":2500}
+{"ts":"2026-10-07T05:46:48Z","event":"ledger_debit","payment_id":"pay_77045b6b","entry_id":"led_2aa191d7","amount":2500,"idempotency_key":"idem_inc_1042"}
+{"ts":"2026-10-07T05:46:48Z","event":"idempotency_stored","payment_id":"pay_77045b6b","idempotency_key":"idem_inc_1042"}
+{"ts":"2026-10-07T05:46:48Z","event":"capture_succeeded","payment_id":"pay_77045b6b","idempotency_key":"idem_inc_1042","status_code":200}

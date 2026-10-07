@@ -1,0 +1,11 @@
+{
+  "id": "INC-1042",
+  "service": "payments",
+  "summary": "Customers are debited twice when capture is retried after a gateway timeout.",
+  "time_window": "2026-04-02T14:10:00Z/2026-04-02T14:12:00Z",
+  "routes": ["POST /v1/payments/{id}/capture"],
+  "timeout_header": "X-Simulate-Gateway-Timeout: true",
+  "symptom": "Two ledger debits exist for one capture idempotency key. The first attempt returned 504 and the retry returned 200.",
+  "expected_fix": "The same Idempotency-Key returns the original capture response and does not append a second debit, including when the first attempt sent X-Simulate-Gateway-Timeout: true.",
+  "log": "incidents/logs/INC-1042.jsonl"
+}
