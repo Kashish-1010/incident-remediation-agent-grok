@@ -6,15 +6,23 @@ The investigation agent is not in this milestone. `docs/requirements.md` and `do
 
 ## Run
 
+On Ubuntu, `python3 -m venv` needs the venv package once:
+
+```bash
+sudo apt install python3.12-venv
+```
+
+Then create the environment and install the project:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
-python3 -m ledger reproduce
+python -m ledger reproduce
 ```
 
-This machine has `python3` and no `python` command. Use `python3` unless the virtualenv is activated. After `source .venv/bin/activate`, `python` works inside that environment.
+This machine has `python3` and no `python` command until the virtualenv is activated. After `source .venv/bin/activate`, `python` works.
 
 `reproduce` prints two ledger debits and rewrites `incidents/logs/INC-1042.jsonl`. Run it from the repository root.
 
