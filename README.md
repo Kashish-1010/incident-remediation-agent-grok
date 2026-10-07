@@ -7,12 +7,14 @@ The investigation agent is not in this milestone. `docs/requirements.md` and `do
 ## Run
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
-python -m ledger reproduce
+python3 -m ledger reproduce
 ```
+
+This machine has `python3` and no `python` command. Use `python3` unless the virtualenv is activated. After `source .venv/bin/activate`, `python` works inside that environment.
 
 `reproduce` prints two ledger debits and rewrites `incidents/logs/INC-1042.jsonl`. Run it from the repository root.
 
@@ -29,14 +31,14 @@ Open `.env` and set `XAI_API_KEY` to the key from the [xAI console](https://cons
 Check that the process loaded the key. This prints the length and the first four characters. It does not print the key and it does not call the API.
 
 ```bash
-python -m ledger check-key
+python3 -m ledger check-key
 ```
 
 A shell export wins over `.env`:
 
 ```bash
 export XAI_API_KEY="your key"
-python -m ledger check-key
+python3 -m ledger check-key
 ```
 
 The timeout path is `X-Simulate-Gateway-Timeout: true` on `POST /v1/payments/{id}/capture`, together with an `Idempotency-Key` header. Amounts are integer cents.
