@@ -27,7 +27,7 @@ incidents/INC-1042.json
 | Phase | Who decides | What you should see |
 | --- | --- | --- |
 | ingest | Code | `ingest.json`, workspace copy |
-| investigate | Grok, up to 3 rounds of `read_file`, `search`, `list_dir` | `root_cause.json`, `runs/<id>/api/` |
+| investigate | Grok, up to `LEDGER_MAX_TOOL_ROUNDS` rounds of `read_file`, `search`, `list_dir` (default 8), then one no-tool fallback | `root_cause.json`, `tool-budget.json`, `runs/<id>/api/` |
 | regression-test | Grok returns the full text of `tests/test_inc_1042.py` | The test is written, then pytest fails |
 | patch | Grok returns the full text of `payments/store.py` only after that failure | `store.diff` |
 | verify-green | Code runs pytest | `pytest-green.txt` |
@@ -143,7 +143,7 @@ A live `investigate` run still writes a full private transcript and workspace un
 
 ## Security boundaries
 
-- Tools the model may call: `read_file`, `search`, `list_dir`. At most 3 rounds. Paths must stay in the workspace, except the incident log file.
+- Tools the model may call: `read_file`, `search`, `list_dir`. At most `LEDGER_MAX_TOOL_ROUNDS` rounds (default 8). After that, one fresh request with no tools must return the root-cause JSON. Paths must stay in the workspace, except the incident log file.
 - The incident log must be a non-symlink file under `incidents/`.
 - The model cannot run a shell. Pytest is a subprocess the orchestrator starts, with the workspace on `PYTHONPATH`, and a 60 second timeout.
 - Replacements are only `tests/test_inc_1042.py` and, after the red failure, `payments/store.py`.

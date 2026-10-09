@@ -2,34 +2,42 @@
 
 A Python CLI runs a fixed investigation of a small FastAPI payments service. The seeded bug is a double debit when capture is retried after a gateway timeout. Grok reasons inside three calls. Python decides the phase order, applies files, runs pytest, and writes the report.
 
-Solid nodes are deterministic Python. Dashed nodes are Grok reasoning through `POST https://api.x.ai/v1/responses` in `ledger/agent/grok_client.py`. Grok does not choose the next phase.
+Blue nodes are deterministic Python inside the run workspace. The dashed box is the Grok API boundary: `POST https://api.x.ai/v1/responses` in `ledger/agent/grok_client.py`. Grok does not choose the next phase. The last node is a person reading `report.md`.
 
 ```mermaid
 flowchart TD
   cli["CLI<br/>python -m ledger investigate"]
-  ingest["Ingest<br/>copy payments/ and tests/<br/>write ingest.json"]
-  tools["Local tools<br/>read_file, search, list_dir<br/>workspace path check, LEDGER_MAX_TOOL_ROUNDS default 8"]
-  root["Save root_cause.json"]
-  writeTest["Write tests/test_inc_1042.py<br/>path and size checks"]
-  red["pytest the new test<br/>save pytest-red.txt"]
-  gate{"Red exit code is 1?"}
-  writeStore["Write payments/store.py<br/>save store.diff"]
-  green["pytest the workspace suite<br/>save pytest-green.txt"]
-  stop["Stop<br/>error.json, no success claim"]
-  report["Blast radius and report.md<br/>success only if red, patch, green agree"]
 
-  reason["Grok: investigate<br/>hypothesis JSON<br/>optional tool calls"]
-  testCall["Grok: regression test<br/>full file JSON"]
-  patchCall["Grok: store.py replacement<br/>full file JSON"]
+  subgraph ws["Isolated workspace · runs/id/workspace"]
+    ingest["Copy payments/ and tests/<br/>committed tree stays buggy"]
+    tools["Local tools<br/>read_file, search, list_dir<br/>LEDGER_MAX_TOOL_ROUNDS default 8"]
+    root["Save root_cause.json"]
+    writeTest["Write tests/test_inc_1042.py"]
+    red["pytest the new test"]
+    gate{"Red exit code is 1?"}
+    writeStore["Write payments/store.py"]
+    green["pytest the workspace suite"]
+    stop["Stop · error.json"]
+    report["report.md<br/>success only if red, patch, green agree"]
+  end
+
+  subgraph api["Grok API boundary · POST /v1/responses"]
+    reason["Investigate<br/>hypothesis JSON"]
+    testCall["Regression test<br/>full file JSON"]
+    patchCall["store.py replacement<br/>full file JSON"]
+  end
+
+  human["Human review<br/>approve before any deploy"]
 
   cli --> ingest --> reason
   reason -->|function_call| tools
-  tools -->|function_call_output<br/>previous_response_id| reason
+  tools -->|function_call_output| reason
   reason --> root --> testCall --> writeTest --> red --> gate
   gate -->|no| stop --> report
   gate -->|yes| patchCall --> writeStore --> green --> report
+  report --> human
 
-  class cli,ingest,tools,root,writeTest,red,gate,writeStore,green,stop,report code
+  class cli,ingest,tools,root,writeTest,red,gate,writeStore,green,stop,report,human code
   class reason,testCall,patchCall grok
   classDef code fill:#e8f1fb,stroke:#1d4e89,color:#10233f
   classDef grok fill:#fff6e8,stroke:#c2410c,color:#431407,stroke-dasharray: 5 3
@@ -108,7 +116,7 @@ Server-side tools are not requested. The client does not stream.
 | File replace | Orchestrator | `tests/test_inc_1042.py` before the patch call. `payments/store.py` only after the red pytest log. At most 150 changed lines against the original. |
 | Pytest | Orchestrator | Subprocess `python -m pytest`, 60-second timeout. The model has no shell. |
 
-Tool rounds in investigate are capped at 3. Unknown tool names return an error result and do not touch the filesystem.
+Tool rounds in investigate stop at `LEDGER_MAX_TOOL_ROUNDS` (default 8). Pending calls past that limit are not executed. One fresh request with no tools must return the root-cause JSON. Unknown tool names return an error result and do not touch the filesystem.
 
 ## Design decisions
 
