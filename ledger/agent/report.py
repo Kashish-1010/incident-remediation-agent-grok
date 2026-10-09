@@ -149,7 +149,12 @@ def _blast_radius(ingest: dict, diff: str, changed: list[str]) -> str:
     routes = ingest.get("routes") or ["POST /v1/payments/{id}/capture"]
     route_text = ", ".join(routes)
     if changed == [STORE_PATH] or (not changed and STORE_PATH in (diff or "")):
-        refund = "The refund function was not edited." if "def refund" not in diff else "The diff touches refund."
+        refund_lines = [
+            line
+            for line in diff.splitlines()
+            if line.startswith(("+", "-")) and not line.startswith(("+++", "---")) and "def refund" in line
+        ]
+        refund = "The diff edits refund." if refund_lines else "The refund function was not edited."
         return (
             f"Capture on {route_text} appends a ledger debit and moves customer funds. "
             f"The change is limited to {STORE_PATH}, which decides whether a retried capture writes another debit. "

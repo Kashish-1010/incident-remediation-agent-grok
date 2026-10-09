@@ -61,6 +61,7 @@ def test_successful_run_requires_approval_and_states_success(tmp_path: Path) -> 
     assert "6 passed" in text
     assert "payments/store.py" in text
     assert "moves customer funds" in text
+    assert "The refund function was not edited." in text
     assert "A person must approve this change before it ships." in text
     assert "does not approve, merge, or deploy" in text
 
