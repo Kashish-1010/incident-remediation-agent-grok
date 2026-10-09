@@ -134,7 +134,14 @@ class GrokClient:
                 self._write_transcript(payload, _error_body(response), response.status_code)
                 raise GrokAPIError(f"Grok request failed with HTTP {response.status_code}")
 
-            parsed = response.json()
+            try:
+                parsed = response.json()
+            except json.JSONDecodeError as exc:
+                self._write_transcript(payload, {"error": "invalid json", "text": response.text[:500]}, response.status_code)
+                raise GrokAPIError("Grok returned a body that is not JSON") from exc
+            if not isinstance(parsed, dict):
+                self._write_transcript(payload, {"error": "json was not an object"}, response.status_code)
+                raise GrokAPIError("Grok returned a JSON value that is not an object")
             self._write_transcript(payload, parsed, response.status_code)
             return parsed
 

@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from ledger.agent.grok_client import GrokResponse
+from ledger.agent.grok_client import GrokAPIError, GrokResponse
 from ledger.agent.investigate import RunPaths
 from ledger.agent.pytest_runner import run_pytest
 from ledger.agent.remediate import remediate
@@ -162,6 +162,27 @@ def test_oversized_patch_is_not_written(tmp_path: Path) -> None:
     assert code == 1
     assert (paths.workspace / "payments" / "store.py").read_text(encoding="utf-8") == original
     assert "150" in json.loads((paths.run_dir / "error.json").read_text(encoding="utf-8"))["error"]
+
+
+def test_api_error_during_patch_does_not_claim_success(tmp_path: Path) -> None:
+    paths = _paths(tmp_path)
+
+    class FailAfterTest(ScriptedClient):
+        def create(self, input_items, tools=None, previous_response_id=None):
+            if self.calls:
+                raise GrokAPIError("Grok request timed out after 2 retries")
+            return super().create(input_items, tools, previous_response_id)
+
+    client = FailAfterTest([_file("tests/test_inc_1042.py", "def test_retry():\n    assert False\n")])
+
+    def runner(_workspace: Path, arguments: list[str] | None = None, timeout: int = 60):
+        return 1, "FAILED tests/test_inc_1042.py::test_retry\n"
+
+    code = remediate(paths, client, pytest_runner=runner)
+    assert code == 1
+    report = (paths.run_dir / "report.md").read_text(encoding="utf-8")
+    assert "Remediation succeeded" not in report
+    assert "timed out" in report
 
 
 def test_pytest_timeout_is_reported(tmp_path: Path) -> None:

@@ -103,6 +103,15 @@ def test_missing_key_does_not_call_the_network(monkeypatch: pytest.MonkeyPatch) 
     assert called is False
 
 
+def test_non_json_body_is_an_api_error() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="not-json")
+
+    client = GrokClient(api_key=SECRET, transport=_transport(handler), sleep=lambda _s: None)
+    with pytest.raises(GrokAPIError, match="not JSON"):
+        client.create([{"role": "user", "content": "hi"}])
+
+
 def test_401_is_not_retried() -> None:
     attempts = 0
 

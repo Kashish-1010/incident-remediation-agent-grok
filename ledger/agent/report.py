@@ -99,9 +99,11 @@ def _succeeded(sequence: dict, error: dict, run_dir: Path) -> bool:
     if not isinstance(steps, list) or len(steps) != 3:
         return False
     red, patch, green = steps
+    red_log = _read_text(run_dir / "pytest-red.txt")
+    green_log = _read_text(run_dir / "pytest-green.txt")
     required = (
-        (run_dir / "pytest-red.txt").is_file(),
-        (run_dir / "pytest-green.txt").is_file(),
+        red_log.startswith("exit_code: 1"),
+        green_log.startswith("exit_code: 0"),
         (run_dir / "store.diff").is_file(),
         (run_dir / "root_cause.json").is_file(),
     )

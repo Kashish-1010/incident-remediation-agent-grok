@@ -80,6 +80,17 @@ def test_failed_green_suite_is_not_called_a_success(tmp_path: Path) -> None:
     assert "A person must approve this change before it ships." in text
 
 
+def test_success_claim_requires_matching_pytest_logs(tmp_path: Path) -> None:
+    run = _run(tmp_path)
+    (run / "sequence.json").write_text(json.dumps(_sequence(1, 0)), encoding="utf-8")
+    (run / "pytest-red.txt").write_text("exit_code: 1\nFAILED tests/test_inc_1042.py\n", encoding="utf-8")
+    (run / "pytest-green.txt").write_text("exit_code: 1\nFAILED tests/test_payments.py\n", encoding="utf-8")
+    (run / "store.diff").write_text("--- a/payments/store.py\n+++ b/payments/store.py\n", encoding="utf-8")
+    text = render_report(run)
+    assert "Remediation succeeded" not in text
+    assert "did not succeed" in text
+
+
 def test_incomplete_run_does_not_claim_success(tmp_path: Path) -> None:
     run = _run(tmp_path)
     text = render_report(run)

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from ledger.agent.grok_client import FunctionCall, GrokResponse
-from ledger.agent.investigate import InvestigationError, investigate, run_investigation
+from ledger.agent.grok_client import FunctionCall, GrokAPIError, GrokResponse
+from ledger.agent.investigate import InvestigationError, ingest, investigate, run_investigation
 from ledger.agent.tools import Toolset
 
 
@@ -164,6 +164,33 @@ def test_unknown_tool_does_not_change_files(tmp_path: Path) -> None:
     assert file.read_text(encoding="utf-8") == before
     command = tools.execute("run_pytest", {})
     assert "unknown tool" in command
+
+
+def test_incident_log_cannot_escape_incidents(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    secret = repo / ".env"
+    incident = json.loads((repo / "incidents" / "INC-1042.json").read_text(encoding="utf-8"))
+    incident["log"] = "../.env"
+    escaped = repo / "incidents" / "escaped.json"
+    escaped.write_text(json.dumps(incident), encoding="utf-8")
+    with pytest.raises(InvestigationError, match="incidents/"):
+        ingest(escaped, repo_root=repo, runs_root=repo / "runs")
+    assert secret.read_text(encoding="utf-8") == "XAI_API_KEY=super-secret\n"
+    assert not (repo / "runs").exists()
+
+
+def test_api_failure_writes_a_report_that_does_not_claim_success(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+
+    class FailingClient:
+        def create(self, *_args, **_kwargs):
+            raise GrokAPIError("Grok request failed with HTTP 503")
+
+    code = investigate(repo / "incidents" / "INC-1042.json", client=FailingClient(), repo_root=repo, runs_root=repo / "runs")
+    assert code == 1
+    report = (repo / "runs" / "INC-1042" / "report.md").read_text(encoding="utf-8")
+    assert "Remediation succeeded" not in report
+    assert "HTTP 503" in report
 
 
 def test_run_investigation_error_on_second_bad_json(tmp_path: Path) -> None:
