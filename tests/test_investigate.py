@@ -11,10 +11,12 @@ from ledger.agent.tools import Toolset
 
 
 class ScriptedClient:
+    # Queue scripted model responses.
     def __init__(self, responses: list[GrokResponse]) -> None:
         self._responses = list(responses)
         self.calls: list[dict] = []
 
+    # Record the request and return the next scripted response.
     def create(self, input_items, tools=None, previous_response_id=None):
         self.calls.append(
             {
@@ -26,10 +28,12 @@ class ScriptedClient:
         return self._responses.pop(0)
 
 
+# Build a GrokResponse with optional tool calls.
 def _response(text: str = "", calls: list[FunctionCall] | None = None, response_id: str = "resp") -> GrokResponse:
     return GrokResponse(id=response_id, output=[], raw={}, text=text, function_calls=calls or [])
 
 
+# Lay out a tiny payments tree, incident, and a secret .env outside incidents/.
 def _repo(tmp_path: Path) -> Path:
     payments = tmp_path / "payments"
     payments.mkdir()
@@ -55,6 +59,7 @@ def _repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
+# One tool round then JSON saves the root cause and a budget with no fallback.
 def test_investigation_runs_tools_then_saves_root_cause(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LEDGER_MAX_TOOL_ROUNDS", raising=False)
     repo = _repo(tmp_path)
@@ -92,6 +97,7 @@ def test_investigation_runs_tools_then_saves_root_cause(tmp_path: Path, monkeypa
     assert store == (repo / "runs" / "INC-1042" / "workspace" / "payments" / "store.py").read_text(encoding="utf-8")
 
 
+# Invalid root-cause text is re-asked once, without tools.
 def test_invalid_json_is_reasked_once(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     client = ScriptedClient(
@@ -110,6 +116,7 @@ def test_invalid_json_is_reasked_once(tmp_path: Path) -> None:
     assert "not valid root-cause JSON" in client.calls[1]["input"][0]["content"]
 
 
+# At the tool limit, pending tools are not run and a fresh no-tool call is made.
 def test_budget_exhaustion_requests_json_without_more_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LEDGER_MAX_TOOL_ROUNDS", "1")
     repo = _repo(tmp_path)
@@ -146,6 +153,7 @@ def test_budget_exhaustion_requests_json_without_more_tools(tmp_path: Path, monk
     assert budget == {"tool_rounds_used": 1, "tool_round_limit": 1, "fallback_triggered": True}
 
 
+# An invalid fallback answer fails the run and does not claim success.
 def test_invalid_fallback_response_fails_the_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LEDGER_MAX_TOOL_ROUNDS", "1")
     repo = _repo(tmp_path)
@@ -167,6 +175,7 @@ def test_invalid_fallback_response_fails_the_report(tmp_path: Path, monkeypatch:
     assert budget["fallback_triggered"] is True
 
 
+# A missing key exits before a run directory is created.
 def test_missing_key_does_not_start(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.setattr("ledger.agent.investigate.api_key", lambda: "")
@@ -176,6 +185,7 @@ def test_missing_key_does_not_start(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert not (repo / "runs").exists()
 
 
+# Reading outside the workspace, including .env, returns an error.
 def test_tool_rejects_paths_outside_the_workspace(tmp_path: Path) -> None:
     # ../.env must not be readable. That file holds the API key during a demo.
     repo = _repo(tmp_path)
@@ -200,6 +210,7 @@ def test_tool_rejects_paths_outside_the_workspace(tmp_path: Path) -> None:
     assert "outside the workspace" in json.loads(searched)["error"]
 
 
+# A write-like tool name is rejected and the file stays unchanged.
 def test_unknown_tool_does_not_change_files(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -216,6 +227,7 @@ def test_unknown_tool_does_not_change_files(tmp_path: Path) -> None:
     assert "unknown tool" in command
 
 
+# A log path of ../.env is rejected before the file is read.
 def test_incident_log_cannot_escape_incidents(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     secret = repo / ".env"
@@ -229,6 +241,7 @@ def test_incident_log_cannot_escape_incidents(tmp_path: Path) -> None:
     assert not (repo / "runs").exists()
 
 
+# An HTTP failure during investigation writes a failed report.
 def test_api_failure_writes_a_report_that_does_not_claim_success(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
 
@@ -243,6 +256,7 @@ def test_api_failure_writes_a_report_that_does_not_claim_success(tmp_path: Path)
     assert "HTTP 503" in report
 
 
+# Two invalid JSON replies raise after the single re-ask.
 def test_run_investigation_error_on_second_bad_json(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     from ledger.agent.investigate import ingest

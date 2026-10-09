@@ -19,6 +19,7 @@ STORE_PATH = "payments/store.py"
 MAX_CHANGED_LINES = 150
 
 
+# Generate the test, prove it fails, patch the store, then write the report.
 def remediate(paths: RunPaths, client: GrokClient, pytest_runner=run_pytest) -> int:
     _continue_transcript(client, paths.run_dir / "api")
     try:
@@ -38,6 +39,7 @@ def remediate(paths: RunPaths, client: GrokClient, pytest_runner=run_pytest) -> 
     return 0
 
 
+# Run red pytest, then the patch call, then the full suite.
 def _remediate(paths: RunPaths, client: GrokClient, pytest_runner) -> None:
     error_path = paths.run_dir / "error.json"
     if error_path.exists():
@@ -103,6 +105,7 @@ def _remediate(paths: RunPaths, client: GrokClient, pytest_runner) -> None:
     print("green: full pytest suite passed")
 
 
+# Ask Grok for one full file as JSON, and re-ask once if parsing fails.
 def _file_from_model(client: GrokClient, prompt: str, allowed_path: str) -> dict:
     response = client.create([{"role": "user", "content": prompt}])
     try:
@@ -127,6 +130,7 @@ def _file_from_model(client: GrokClient, prompt: str, allowed_path: str) -> dict
             raise InvestigationError(f"file JSON was invalid after one re-ask: {second}") from second
 
 
+# Accept only the expected path and a non-empty file body.
 def _validate_file(response: GrokResponse, allowed_path: str) -> dict:
     value = parse_json_content(response.text)
     if not isinstance(value, dict):
@@ -142,6 +146,7 @@ def _validate_file(response: GrokResponse, allowed_path: str) -> dict:
     return {"path": path, "content": content}
 
 
+# Resolve an allowed relative path and refuse anything outside the workspace.
 def _workspace_file(workspace: Path, relative: str) -> Path:
     if relative not in {TEST_PATH, STORE_PATH}:
         raise InvestigationError(f"refusing to write {relative}")
@@ -152,17 +157,20 @@ def _workspace_file(workspace: Path, relative: str) -> Path:
     return target
 
 
+# Reject a replacement that changes more than 150 lines.
 def _check_line_budget(original: str, updated: str) -> None:
     changed = _changed_line_count(original, updated)
     if changed > MAX_CHANGED_LINES:
         raise InvestigationError(f"replacement changes {changed} lines, over the limit of {MAX_CHANGED_LINES}")
 
 
+# Count added and removed lines in a unified diff.
 def _changed_line_count(original: str, updated: str) -> int:
     diff = difflib.unified_diff(original.splitlines(), updated.splitlines(), n=0)
     return sum(1 for line in diff if (line.startswith("+") or line.startswith("-")) and not line.startswith(("+++", "---")))
 
 
+# Build the store.py diff saved next to the report.
 def _diff(original: str, updated: str) -> str:
     lines = difflib.unified_diff(
         original.splitlines(),
@@ -174,6 +182,7 @@ def _diff(original: str, updated: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+# Ask for a pytest that fails while the timeout retry still double-debits.
 def _test_prompt(root_cause: dict, incident: dict, store_text: str) -> str:
     return (
         "Write one pytest module that fails on the current payments code because a capture retry "
@@ -200,6 +209,7 @@ def _test_prompt(root_cause: dict, incident: dict, store_text: str) -> str:
     )
 
 
+# Ask for a minimal store.py fix after the red pytest log exists.
 def _patch_prompt(root_cause: dict, store_text: str, test_text: str, red_output: str) -> str:
     return (
         "The regression test failed on the unpatched code, which is the expected red result. "
@@ -223,18 +233,22 @@ def _patch_prompt(root_cause: dict, store_text: str, test_text: str, red_output:
     )
 
 
+# Prefix pytest output with the exit code so the report can check it.
 def _pytest_log(exit_code: int, output: str) -> str:
     return f"exit_code: {exit_code}\n{output}"
 
 
+# Save the red, patch, and green steps for the success check.
 def _write_sequence(paths: RunPaths, steps: list[dict]) -> None:
     (paths.run_dir / "sequence.json").write_text(json.dumps({"steps": steps}, indent=2) + "\n", encoding="utf-8")
 
 
+# Record why the phase stopped. The report will not claim success.
 def _write_error(paths: RunPaths, message: str) -> None:
     (paths.run_dir / "error.json").write_text(json.dumps({"error": message}, indent=2) + "\n", encoding="utf-8")
 
 
+# Continue API transcript numbering so a later phase does not overwrite 001.
 def _continue_transcript(client: GrokClient, api_dir: Path) -> None:
     if not api_dir.is_dir():
         return
@@ -243,6 +257,7 @@ def _continue_transcript(client: GrokClient, api_dir: Path) -> None:
         client._call_index = existing
 
 
+# True when path stays inside the workspace.
 def _inside(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)

@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Read KEY=VALUE lines from .env without overriding existing variables.
 def load_dotenv(path: Path | None = None) -> Path | None:
     env_path = path if path is not None else ROOT / ".env"
     if not env_path.is_file():
@@ -23,11 +24,13 @@ def load_dotenv(path: Path | None = None) -> Path | None:
     return env_path
 
 
+# Return XAI_API_KEY after loading .env.
 def api_key() -> str:
     load_dotenv()
     return os.environ.get("XAI_API_KEY", "").strip()
 
 
+# Describe whether the key is set, without printing the secret.
 def key_status() -> str:
     load_dotenv()
     value = os.environ.get("XAI_API_KEY", "").strip()

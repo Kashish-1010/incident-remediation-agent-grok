@@ -15,10 +15,12 @@ ALLOWED_TOOLS = ("read_file", "search", "list_dir")
 
 
 class Toolset:
+    # Remember the workspace root and the one allowed incident log.
     def __init__(self, workspace: Path, incident_log: Path) -> None:
         self.workspace = workspace.resolve()
         self.incident_log = incident_log.resolve()
 
+    # Describe the three read-only tools sent to the Grok API.
     def schemas(self) -> list[dict]:
         return [
             {
@@ -56,6 +58,7 @@ class Toolset:
             },
         ]
 
+    # Dispatch a tool call, or return an error for anything else.
     def execute(self, name: str, arguments: object) -> str:
         # Unknown names, including write or shell tools, never touch the filesystem.
         if name not in ALLOWED_TOOLS:
@@ -74,6 +77,7 @@ class Toolset:
         except OSError as exc:
             return _error(str(exc))
 
+    # Read a workspace file, or the incident log, as UTF-8 text.
     def read_file(self, path: str) -> str:
         target = self._resolve_read(path)
         if not target.is_file():
@@ -83,6 +87,7 @@ class Toolset:
             text = text[:MAX_READ_CHARS] + "\n... truncated ..."
         return text
 
+    # Find a literal string in text files under the workspace.
     def search(self, query: str, path: str | None) -> str:
         if not query:
             return _error("query is required")
@@ -106,6 +111,7 @@ class Toolset:
                         return "\n".join(matches)
         return "\n".join(matches) if matches else "no matches"
 
+    # List names in one workspace directory.
     def list_dir(self, path: str) -> str:
         target = self._resolve_workspace(path or ".")
         if not target.is_dir():
@@ -113,6 +119,7 @@ class Toolset:
         names = sorted(entry.name for entry in target.iterdir())
         return "\n".join(names)
 
+    # Allow the incident log or a file inside the workspace.
     def _resolve_read(self, path: str) -> Path:
         if not path:
             raise PermissionError("path is required")
@@ -122,23 +129,27 @@ class Toolset:
             return candidate
         return self._require_workspace(candidate, path)
 
+    # Resolve a path and reject anything outside the workspace.
     def _resolve_workspace(self, path: str) -> Path:
         if not path:
             raise PermissionError("path is required")
         return self._require_workspace(self._candidate(path), path)
 
+    # Resolve a relative path against the workspace, following .. and symlinks.
     def _candidate(self, path: str) -> Path:
         raw = Path(path)
         if raw.is_absolute():
             return raw.resolve()
         return (self.workspace / raw).resolve()
 
+    # Reject a resolved path that escapes the workspace.
     def _require_workspace(self, candidate: Path, original: str) -> Path:
         if not _inside(candidate, self.workspace):
             raise PermissionError(f"path is outside the workspace: {original}")
         return candidate
 
 
+# True when path is the root or a file inside it.
 def _inside(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)
@@ -147,5 +158,6 @@ def _inside(path: Path, root: Path) -> bool:
     return True
 
 
+# JSON error string returned to the model as a tool result.
 def _error(message: str) -> str:
     return json.dumps({"error": message})

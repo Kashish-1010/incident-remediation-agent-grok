@@ -7,6 +7,7 @@ from pathlib import Path
 from ledger.env import key_status
 
 
+# Dispatch reproduce, check-key, investigate, or remediate.
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ledger")
     sub = parser.add_subparsers(dest="command", required=True)

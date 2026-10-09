@@ -14,6 +14,7 @@ from ledger.agent.investigate import RunPaths
 STORE_PATH = "payments/store.py"
 
 
+# Render report.md from the run artifacts and print its path.
 def write_report(paths: RunPaths) -> Path:
     report = paths.run_dir / "report.md"
     report.write_text(render_report(paths.run_dir), encoding="utf-8")
@@ -22,6 +23,7 @@ def write_report(paths: RunPaths) -> Path:
     return report
 
 
+# Assemble the incident, evidence, pytest results, diff, blast radius, and approval line.
 def render_report(run_dir: Path) -> str:
     ingest = _read_json(run_dir / "ingest.json")
     root = _read_json(run_dir / "root_cause.json")
@@ -92,6 +94,7 @@ def render_report(run_dir: Path) -> str:
     return "\n".join(lines)
 
 
+# Claim success only when red, patch, and green agree and no error file exists.
 def _succeeded(sequence: dict, error: dict, run_dir: Path) -> bool:
     # Success requires the sequence and the pytest logs to agree. Grok is not asked.
     if error:
@@ -118,6 +121,7 @@ def _succeeded(sequence: dict, error: dict, run_dir: Path) -> bool:
     )
 
 
+# State success or the reason the run did not finish.
 def _status_paragraph(succeeded: bool, error: dict, steps: list) -> str:
     if succeeded:
         return "Remediation succeeded. The new test failed on the original code, the patch applied, and the full suite passed."
@@ -128,6 +132,7 @@ def _status_paragraph(succeeded: bool, error: dict, steps: list) -> str:
     return "Remediation did not succeed. The red, patch, and green sequence did not finish cleanly."
 
 
+# Quote one pytest log, or say that step did not run.
 def _pytest_section(steps: list, name: str, path: Path) -> str:
     step = next((item for item in steps if isinstance(item, dict) and item.get("step") == name), None)
     if step is None:
@@ -137,6 +142,7 @@ def _pytest_section(steps: list, name: str, path: Path) -> str:
     return f"Exit code {exit_code}.\n\n```text\n{excerpt}\n```"
 
 
+# List changed files and a short unified diff.
 def _files_section(changed: list[str], diff: str) -> str:
     if not changed:
         return "No files were changed."
@@ -148,6 +154,7 @@ def _files_section(changed: list[str], diff: str) -> str:
     return f"{summary}\n\nDiff summary: {added} lines added, {removed} lines removed.\n\n```diff\n{body.rstrip()}\n```"
 
 
+# Describe capture moving money, based on the files that actually changed.
 def _blast_radius(ingest: dict, diff: str, changed: list[str]) -> str:
     routes = ingest.get("routes") or ["POST /v1/payments/{id}/capture"]
     route_text = ", ".join(routes)
@@ -172,6 +179,7 @@ def _blast_radius(ingest: dict, diff: str, changed: list[str]) -> str:
     )
 
 
+# Say how to restore store.py. The ledger is in memory.
 def _rollback(changed: list[str]) -> str:
     if STORE_PATH in changed:
         return (
@@ -182,6 +190,7 @@ def _rollback(changed: list[str]) -> str:
     return "No production patch was applied. Nothing needs to be rolled back."
 
 
+# Read the patched path from the sequence, falling back to the diff header.
 def _changed_files(steps: list, diff: str) -> list[str]:
     files = []
     for step in steps:
@@ -192,6 +201,7 @@ def _changed_files(steps: list, diff: str) -> list[str]:
     return files
 
 
+# Count added and removed lines, ignoring the diff headers.
 def _diff_counts(diff: str) -> tuple[int, int]:
     added = removed = 0
     for line in diff.splitlines():
@@ -204,6 +214,7 @@ def _diff_counts(diff: str) -> tuple[int, int]:
     return added, removed
 
 
+# Keep the first lines of a pytest log so the report stays readable.
 def _excerpt(path: Path, limit: int = 40) -> str:
     if not path.is_file():
         return "output was not saved"
@@ -214,6 +225,7 @@ def _excerpt(path: Path, limit: int = 40) -> str:
     return "\n".join(rows[:limit] + ["... truncated ..."])
 
 
+# Load a JSON object, or an empty dict if the artifact is missing.
 def _read_json(path: Path) -> dict:
     if not path.is_file():
         return {}
@@ -224,6 +236,7 @@ def _read_json(path: Path) -> dict:
     return value if isinstance(value, dict) else {}
 
 
+# Read a text artifact, or return an empty string.
 def _read_text(path: Path) -> str:
     if not path.is_file():
         return ""

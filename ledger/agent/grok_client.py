@@ -52,6 +52,7 @@ class FunctionCall:
     call_id: str
     arguments: str
 
+    # Parse the tool-call arguments string as JSON.
     def arguments_json(self) -> object:
         return json.loads(self.arguments)
 
@@ -66,6 +67,7 @@ class GrokResponse:
 
 
 class GrokClient:
+    # Hold the API key, model, timeout, and optional transcript directory.
     def __init__(
         self,
         api_key: str | None = None,
@@ -83,9 +85,11 @@ class GrokClient:
         self._call_index = 0
         self._client = httpx.Client(timeout=self.timeout, transport=transport)
 
+    # Close the HTTP client.
     def close(self) -> None:
         self._client.close()
 
+    # POST one Responses API request and parse the output items.
     def create(
         self,
         input_items: list[dict],
@@ -104,6 +108,7 @@ class GrokClient:
         body = self._post(payload)
         return parse_response(body)
 
+    # Send the request, retry 429 and 5xx twice, and never retry 401.
     def _post(self, payload: dict) -> dict:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -146,6 +151,7 @@ class GrokClient:
             self._write_transcript(payload, parsed, response.status_code)
             return parsed
 
+    # Save the request and response with the API key replaced by ***.
     def _write_transcript(self, request: dict, response_body: dict, status: int | None) -> None:
         if self.transcript_dir is None:
             return
@@ -169,6 +175,7 @@ class GrokClient:
         )
 
 
+# Pull message text and function_call items out of the response output.
 def parse_response(body: dict) -> GrokResponse:
     output = body.get("output") or []
     calls: list[FunctionCall] = []
@@ -186,6 +193,7 @@ def parse_response(body: dict) -> GrokResponse:
     return GrokResponse(id=str(body.get("id", "")), output=output, raw=body, text="\n".join(part for part in texts if part), function_calls=calls)
 
 
+# Parse a JSON object, stripping one markdown fence if present.
 def parse_json_content(text: str) -> object:
     stripped = text.strip()
     if stripped.startswith("```"):
@@ -193,6 +201,7 @@ def parse_json_content(text: str) -> object:
     return json.loads(stripped)
 
 
+# Replace the API key anywhere in a JSON-like structure.
 def redact(value: object, secret: str) -> object:
     if not secret:
         return value
@@ -205,6 +214,7 @@ def redact(value: object, secret: str) -> object:
     return value
 
 
+# Join text blocks from a message output item.
 def _message_text(content: object) -> str:
     if isinstance(content, str):
         return content
@@ -219,6 +229,7 @@ def _message_text(content: object) -> str:
     return ""
 
 
+# Read an error response as JSON, or keep the raw text.
 def _error_body(response: httpx.Response) -> dict:
     try:
         body = response.json()
@@ -229,5 +240,6 @@ def _error_body(response: httpx.Response) -> dict:
     return body
 
 
+# Pretty-print a transcript record.
 def _dump(value: object) -> str:
     return json.dumps(value, indent=2, sort_keys=True) + "\n"

@@ -10,6 +10,7 @@ from pathlib import Path
 PYTEST_TIMEOUT_SECONDS = 60
 
 
+# Run pytest in the workspace with a timeout. The model has no shell.
 def run_pytest(workspace: Path, arguments: list[str] | None = None, timeout: int = PYTEST_TIMEOUT_SECONDS) -> tuple[int, str]:
     command = [sys.executable, "-m", "pytest", "-q", *(arguments or [])]
     env = os.environ.copy()

@@ -18,11 +18,14 @@ from ledger.env import key_status, load_dotenv
 SECRET = "xai-test-secret-value"
 
 
+# Wrap a handler as an httpx mock so the test does not reach the network.
 def _transport(handler) -> httpx.MockTransport:
     return httpx.MockTransport(handler)
 
 
+# A message output item becomes response text.
 def test_parses_message_text() -> None:
+    # Return a canned HTTP response for the Grok client.
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url == API_URL
         assert request.headers["Authorization"] == f"Bearer {SECRET}"
@@ -47,7 +50,9 @@ def test_parses_message_text() -> None:
     assert response.function_calls == []
 
 
+# Two function_call items are parsed, and the follow-up sends previous_response_id.
 def test_parses_parallel_function_calls() -> None:
+    # Return a canned HTTP response for the Grok client.
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
         assert body["previous_response_id"] == "resp_1"
@@ -84,14 +89,17 @@ def test_parses_parallel_function_calls() -> None:
     assert response.function_calls[0].arguments_json() == {"path": "payments/store.py"}
 
 
+# JSON wrapped in a markdown fence still parses.
 def test_strips_a_json_fence() -> None:
     assert parse_json_content("```json\n{\"a\": 1}\n```") == {"a": 1}
 
 
+# An empty key raises before any HTTP call.
 def test_missing_key_does_not_call_the_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     called = False
 
+    # Return a canned HTTP response for the Grok client.
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal called
         called = True
@@ -103,7 +111,9 @@ def test_missing_key_does_not_call_the_network(monkeypatch: pytest.MonkeyPatch) 
     assert called is False
 
 
+# A 200 body that is not JSON is an API error.
 def test_non_json_body_is_an_api_error() -> None:
+    # Return a canned HTTP response for the Grok client.
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, text="not-json")
 
@@ -112,9 +122,11 @@ def test_non_json_body_is_an_api_error() -> None:
         client.create([{"role": "user", "content": "hi"}])
 
 
+# HTTP 401 is returned to the caller on the first attempt.
 def test_401_is_not_retried() -> None:
     attempts = 0
 
+    # Return a canned HTTP response for the Grok client.
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal attempts
         attempts += 1
@@ -126,9 +138,11 @@ def test_401_is_not_retried() -> None:
     assert attempts == 1
 
 
+# HTTP 429 is retried, then a 200 ends the loop.
 def test_429_then_success_retries_and_stops() -> None:
     attempts = 0
 
+    # Return a canned HTTP response for the Grok client.
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal attempts
         attempts += 1
@@ -142,9 +156,11 @@ def test_429_then_success_retries_and_stops() -> None:
     assert attempts == 3
 
 
+# A timeout is retried twice and then raised.
 def test_timeout_retries_twice_then_fails() -> None:
     attempts = 0
 
+    # Return a canned HTTP response for the Grok client.
     def handler(_request: httpx.Request) -> httpx.Response:
         nonlocal attempts
         attempts += 1
@@ -156,6 +172,7 @@ def test_timeout_retries_twice_then_fails() -> None:
     assert attempts == 3
 
 
+# Saved transcripts replace the bearer token and the raw key.
 def test_transcript_redacts_the_key(tmp_path: Path) -> None:
     # The saved request must not contain the bearer token or the raw key.
     def handler(_request: httpx.Request) -> httpx.Response:
@@ -174,6 +191,7 @@ def test_transcript_redacts_the_key(tmp_path: Path) -> None:
     assert "***" in request_text
 
 
+# Values already in the environment are not overwritten by .env.
 def test_dotenv_loads_only_when_unset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text('XAI_API_KEY="from-file"\nXAI_MODEL=grok-4.7\n', encoding="utf-8")
@@ -186,6 +204,7 @@ def test_dotenv_loads_only_when_unset(tmp_path: Path, monkeypatch: pytest.Monkey
     assert os_environ_key() == "from-shell"
 
 
+# Read the key the test just set.
 def os_environ_key() -> str:
     import os
 

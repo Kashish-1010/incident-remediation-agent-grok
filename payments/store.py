@@ -6,6 +6,7 @@ from payments.logging import log_event
 
 
 class PaymentError(Exception):
+    # Carry the HTTP status alongside the error text.
     def __init__(self, status_code: int, detail: str) -> None:
         self.status_code = status_code
         self.detail = detail
@@ -13,12 +14,14 @@ class PaymentError(Exception):
 
 
 class Store:
+    # In-memory payments, ledger rows, idempotency records, and log events.
     def __init__(self) -> None:
         self.payments: dict[str, dict] = {}
         self.ledger: list[dict] = []
         self.idempotency: dict[str, dict] = {}
         self.events: list[dict] = []
 
+    # Open a payment in created status. No money moves yet.
     def create_payment(self, amount: int, currency: str) -> dict:
         if amount <= 0:
             raise PaymentError(400, "amount must be a positive number of cents")
@@ -34,6 +37,7 @@ class Store:
         log_event(self.events, "payment_created", payment_id=payment["id"], amount=amount)
         return self._view(payment["id"])
 
+    # Move a created payment to authorized so it can be captured.
     def authorize(self, payment_id: str) -> dict:
         payment = self._require(payment_id)
         if payment["status"] != "created":
@@ -42,6 +46,7 @@ class Store:
         log_event(self.events, "payment_authorized", payment_id=payment_id)
         return self._view(payment_id)
 
+    # Debit the ledger and record the idempotency key, unless the timeout path returns early.
     def capture(self, payment_id: str, idempotency_key: str, simulate_timeout: bool) -> tuple[dict, int]:
         if not idempotency_key:
             raise PaymentError(400, "Idempotency-Key is required")
@@ -113,6 +118,7 @@ class Store:
         )
         return body, 200
 
+    # Append a credit and mark a captured payment refunded.
     def refund(self, payment_id: str) -> dict:
         payment = self._require(payment_id)
         if payment["status"] != "captured":
@@ -134,16 +140,19 @@ class Store:
         )
         return self._view(payment_id)
 
+    # Return the payment plus the ledger rows that belong to it.
     def get_payment(self, payment_id: str) -> dict:
         self._require(payment_id)
         return self._view(payment_id)
 
+    # Look up a payment or raise 404.
     def _require(self, payment_id: str) -> dict:
         payment = self.payments.get(payment_id)
         if payment is None:
             raise PaymentError(404, "payment not found")
         return payment
 
+    # Build the API shape: payment fields plus its ledger entries.
     def _view(self, payment_id: str) -> dict:
         payment = self.payments[payment_id]
         ledger = [entry for entry in self.ledger if entry["payment_id"] == payment_id]

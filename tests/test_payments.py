@@ -7,10 +7,12 @@ from payments.app import create_app
 
 
 @pytest.fixture
+# Give each test a new in-memory payments app.
 def client() -> TestClient:
     return TestClient(create_app())
 
 
+# A new payment is fetchable and has an empty ledger.
 def test_create_and_fetch(client: TestClient) -> None:
     created = client.post("/v1/payments", json={"amount": 1800, "currency": "usd"})
     assert created.status_code == 201
@@ -23,6 +25,7 @@ def test_create_and_fetch(client: TestClient) -> None:
     assert fetched.json()["id"] == body["id"]
 
 
+# A normal capture appends one debit for the authorized amount.
 def test_authorize_capture_writes_one_debit(client: TestClient) -> None:
     payment_id = _authorized(client, 4200)
     captured = client.post(
@@ -36,6 +39,7 @@ def test_authorize_capture_writes_one_debit(client: TestClient) -> None:
     assert body["ledger"][0]["amount"] == 4200
 
 
+# A second successful capture with the same key does not debit again.
 def test_second_capture_after_success_is_idempotent(client: TestClient) -> None:
     # The happy path stores the key. The timeout retry is left for the agent.
     payment_id = _authorized(client, 900)
@@ -48,6 +52,7 @@ def test_second_capture_after_success_is_idempotent(client: TestClient) -> None:
     assert len(second.json()["ledger"]) == 1
 
 
+# Refund appends a credit after the capture debit.
 def test_refund_appends_a_credit(client: TestClient) -> None:
     payment_id = _authorized(client, 1500)
     client.post(f"/v1/payments/{payment_id}/capture", headers={"Idempotency-Key": "idem_refund"})
@@ -59,12 +64,14 @@ def test_refund_appends_a_credit(client: TestClient) -> None:
     assert body["ledger"][1]["amount"] == 1500
 
 
+# Capture without Idempotency-Key is rejected.
 def test_capture_requires_an_idempotency_key(client: TestClient) -> None:
     payment_id = _authorized(client, 100)
     response = client.post(f"/v1/payments/{payment_id}/capture")
     assert response.status_code == 422
 
 
+# Create and authorize a payment and return its id.
 def _authorized(client: TestClient, amount: int) -> str:
     created = client.post("/v1/payments", json={"amount": amount, "currency": "usd"})
     assert created.status_code == 201

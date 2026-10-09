@@ -7,6 +7,7 @@ from ledger.agent.investigate import RunPaths
 from ledger.agent.report import render_report, write_report
 
 
+# Write the minimum incident and root-cause artifacts for a report.
 def _run(tmp_path: Path) -> Path:
     run = tmp_path / "INC-1042"
     run.mkdir()
@@ -37,6 +38,7 @@ def _run(tmp_path: Path) -> Path:
     return run
 
 
+# Build a red, optional patch, and green sequence.
 def _sequence(red: int, green: int | None) -> dict:
     steps = [{"step": "red", "exit_code": red, "artifact": "pytest-red.txt"}]
     if green is not None:
@@ -45,6 +47,7 @@ def _sequence(red: int, green: int | None) -> dict:
     return {"steps": steps}
 
 
+# A matching red-green sequence says success and still requires approval.
 def test_successful_run_requires_approval_and_states_success(tmp_path: Path) -> None:
     run = _run(tmp_path)
     (run / "sequence.json").write_text(json.dumps(_sequence(1, 0)), encoding="utf-8")
@@ -66,6 +69,7 @@ def test_successful_run_requires_approval_and_states_success(tmp_path: Path) -> 
     assert "does not approve, merge, or deploy" in text
 
 
+# A green exit code of 1 is reported as failure.
 def test_failed_green_suite_is_not_called_a_success(tmp_path: Path) -> None:
     # A later suite failure must not be described as a finished remediation.
     run = _run(tmp_path)
@@ -81,6 +85,7 @@ def test_failed_green_suite_is_not_called_a_success(tmp_path: Path) -> None:
     assert "A person must approve this change before it ships." in text
 
 
+# A sequence that disagrees with the pytest log is not a success.
 def test_success_claim_requires_matching_pytest_logs(tmp_path: Path) -> None:
     run = _run(tmp_path)
     (run / "sequence.json").write_text(json.dumps(_sequence(1, 0)), encoding="utf-8")
@@ -92,6 +97,7 @@ def test_success_claim_requires_matching_pytest_logs(tmp_path: Path) -> None:
     assert "did not succeed" in text
 
 
+# A run with no pytest steps stays incomplete.
 def test_incomplete_run_does_not_claim_success(tmp_path: Path) -> None:
     run = _run(tmp_path)
     text = render_report(run)

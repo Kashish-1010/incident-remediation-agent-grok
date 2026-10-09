@@ -12,6 +12,7 @@ DEFAULT_LOG = ROOT / "incidents" / "logs" / "INC-1042.jsonl"
 IDEMPOTENCY_KEY = "idem_inc_1042"
 
 
+# Run timeout-then-retry capture and write the incident JSONL log.
 def reproduce(log_path: Path = DEFAULT_LOG) -> int:
     app = create_app()
     client = TestClient(app)

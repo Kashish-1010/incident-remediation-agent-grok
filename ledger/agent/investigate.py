@@ -29,6 +29,7 @@ class RunPaths:
     incident_log: Path
 
 
+# Ingest the incident, ask Grok for a root cause, and optionally continue to the patch.
 def investigate(
     incident_path: Path,
     *,
@@ -67,6 +68,7 @@ def investigate(
     return remediate(paths, grok)
 
 
+# Copy the payments tree into a new run workspace and save the incident log.
 def ingest(incident_path: Path, *, repo_root: Path, runs_root: Path) -> RunPaths:
     incident_file = incident_path if incident_path.is_absolute() else repo_root / incident_path
     incident = json.loads(incident_file.read_text(encoding="utf-8"))
@@ -101,6 +103,7 @@ class InvestigationError(Exception):
     pass
 
 
+# Call Grok, run read-only tools, and stop with a no-tool fallback at the budget.
 def run_investigation(client: GrokClient, paths: RunPaths) -> dict:
     tools = Toolset(paths.workspace, paths.incident_log)
     ingest_record = json.loads((paths.run_dir / "ingest.json").read_text(encoding="utf-8"))
@@ -138,6 +141,7 @@ def run_investigation(client: GrokClient, paths: RunPaths) -> dict:
     return _final_json(client, response)
 
 
+# Read LEDGER_MAX_TOOL_ROUNDS, defaulting to 8.
 def tool_round_limit() -> int:
     raw = os.environ.get("LEDGER_MAX_TOOL_ROUNDS", str(DEFAULT_MAX_TOOL_ROUNDS))
     try:
@@ -149,6 +153,7 @@ def tool_round_limit() -> int:
     return value
 
 
+# Ask for root-cause JSON using the log, store.py, and tool results already collected.
 def _fallback_prompt(incident: dict, store_text: str, trace: list[dict], limit: int) -> str:
     results = []
     for item in trace:
@@ -170,11 +175,13 @@ def _fallback_prompt(incident: dict, store_text: str, trace: list[dict], limit: 
     )
 
 
+# Record how many tool rounds ran and whether the fallback was used.
 def _write_budget(paths: RunPaths, rounds: int, limit: int, fallback: bool) -> None:
     record = {"tool_rounds_used": rounds, "tool_round_limit": limit, "fallback_triggered": fallback}
     (paths.run_dir / "tool-budget.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
 
+# Parse the root-cause JSON, with one re-ask if it is invalid.
 def _final_json(client: GrokClient, response: GrokResponse) -> dict:
     try:
         return _validate(parse_json_content(response.text))
@@ -198,6 +205,7 @@ def _final_json(client: GrokClient, response: GrokResponse) -> dict:
             raise InvestigationError(f"root-cause JSON was invalid after one re-ask: {second}") from second
 
 
+# Require hypothesis, confidence, files, and evidence.
 def _validate(value: object) -> dict:
     if not isinstance(value, dict):
         raise ValueError("root cause must be a JSON object")
@@ -220,6 +228,7 @@ def _validate(value: object) -> dict:
     }
 
 
+# Build the first investigate prompt, with the log and store.py marked untrusted.
 def _prompt(incident: dict, store_text: str) -> str:
     return (
         "You are investigating a production payments incident. "
@@ -235,6 +244,7 @@ def _prompt(incident: dict, store_text: str) -> str:
     )
 
 
+# Accept only a real file under incidents/, never a symlink or ../ path.
 def _incident_log(repo_root: Path, log_value: str) -> Path:
     raw = Path(log_value)
     if raw.is_absolute() or ".." in raw.parts:
@@ -249,6 +259,7 @@ def _incident_log(repo_root: Path, log_value: str) -> Path:
     return resolved
 
 
+# True when path stays inside root after resolution.
 def _path_inside(path: Path, root: Path) -> bool:
     try:
         path.relative_to(root)
@@ -257,6 +268,7 @@ def _path_inside(path: Path, root: Path) -> bool:
     return True
 
 
+# Summarize one model response for investigate.json.
 def _trace_item(response: GrokResponse) -> dict:
     return {
         "response_id": response.id,
@@ -265,10 +277,12 @@ def _trace_item(response: GrokResponse) -> dict:
     }
 
 
+# Save the tool trace before the next phase.
 def _write_trace(paths: RunPaths, trace: list[dict]) -> None:
     (paths.run_dir / "investigate.json").write_text(json.dumps(trace, indent=2) + "\n", encoding="utf-8")
 
 
+# Use runs/<id>, or a timestamped directory if that name already exists.
 def _run_dir(runs_root: Path, incident_id: str) -> Path:
     candidate = runs_root / incident_id
     if not candidate.exists():

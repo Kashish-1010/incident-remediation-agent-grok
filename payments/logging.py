@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 
+# Append one timestamped JSON event to the in-memory log.
 def log_event(sink: list[dict], event: str, **fields: object) -> dict:
     # One dict per event so reproduce can write a JSONL incident log.
     record = {
