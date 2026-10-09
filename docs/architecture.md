@@ -5,7 +5,7 @@ A Python CLI runs a fixed investigation of a small FastAPI payments service. The
 Solid nodes are deterministic Python. Dashed nodes are Grok reasoning through `POST https://api.x.ai/v1/responses` in `ledger/agent/grok_client.py`. Grok does not choose the next phase. Human review is the last step, after the report.
 
 ```mermaid
-%%{init: {'theme': 'base', 'flowchart': {'nodeSpacing': 32, 'rankSpacing': 40, 'padding': 12}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'background': '#f7f8fa', 'lineColor': '#243044', 'arrowheadColor': '#243044'}, 'flowchart': {'nodeSpacing': 32, 'rankSpacing': 40, 'padding': 12}}}%%
 flowchart TD
   cli["CLI<br/>ledger investigate"]
   ingest["Ingest<br/>copy payments/ and tests/"]
@@ -38,6 +38,8 @@ flowchart TD
   classDef code fill:#f4f7fb,stroke:#3d5a80,color:#1c2838,stroke-width:1px
   classDef grok fill:#fbf8f3,stroke:#8a6240,color:#3d2c1e,stroke-width:1px,stroke-dasharray: 4 3
   classDef review fill:#f6f6f4,stroke:#6b6b66,color:#2a2a28,stroke-width:1px
+
+  linkStyle default stroke:#243044,stroke-width:1.5px,color:#243044
 ```
 
 When the tool budget is spent, pending calls are not run. One fresh Grok request with no tools must return the root cause. `python -m ledger reproduce` is outside this graph. It reruns the timeout locally and does not call Grok.
