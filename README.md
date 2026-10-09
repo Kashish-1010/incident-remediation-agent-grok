@@ -40,7 +40,7 @@ Tradeoffs that keep the demo short:
 - The patch call is skipped if the new test passes or errors for a reason other than a failed assertion. There is no repair turn.
 - The workspace is a copy, so a second run does not need the first patch reverted. If `runs/INC-1042/` already exists, the new directory is `runs/INC-1042-<timestamp>/`.
 
-`docs/architecture.md` is the longer design note. `docs/requirements.md` is the scope. `docs/security-review.md` is what is and is not safe. `docs/demo-runbook.md` is the live walkthrough.
+`docs/architecture.md` has the phase diagram. Solid nodes are Python. Dashed nodes are Grok. `docs/requirements.md` is the scope. `docs/security-review.md` is what is and is not safe. `docs/demo-runbook.md` is the live walkthrough.
 
 ## Grok API
 
