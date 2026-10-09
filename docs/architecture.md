@@ -1,17 +1,41 @@
 # Architecture
 
-A Python CLI runs a fixed investigation. Grok is called three times. A small FastAPI payments service, with one seeded capture-retry bug, is the system under investigation.
+A Python CLI runs a fixed investigation of a small FastAPI payments service. The seeded bug is a double debit when capture is retried after a gateway timeout. Grok reasons inside three calls. Python decides the phase order, applies files, runs pytest, and writes the report.
 
-```text
-incident JSON
-    → CLI
-    → orchestrator
-    → POST https://api.x.ai/v1/responses   (investigate, then files, then hypothesis)
-    → write test, pytest, write store.py, pytest
-    → report.md filled by code
+Solid nodes are deterministic Python. Dashed nodes are Grok reasoning through `POST https://api.x.ai/v1/responses` in `ledger/agent/grok_client.py`. Grok does not choose the next phase.
+
+```mermaid
+flowchart TD
+  cli["CLI<br/>python -m ledger investigate"]
+  ingest["Ingest<br/>copy payments/ and tests/<br/>write ingest.json"]
+  tools["Local tools<br/>read_file, search, list_dir<br/>workspace path check, max 3 rounds"]
+  root["Save root_cause.json"]
+  writeTest["Write tests/test_inc_1042.py<br/>path and size checks"]
+  red["pytest the new test<br/>save pytest-red.txt"]
+  gate{"Red exit code is 1?"}
+  writeStore["Write payments/store.py<br/>save store.diff"]
+  green["pytest the workspace suite<br/>save pytest-green.txt"]
+  stop["Stop<br/>error.json, no success claim"]
+  report["Blast radius and report.md<br/>success only if red, patch, green agree"]
+
+  reason["Grok: investigate<br/>hypothesis JSON<br/>optional tool calls"]
+  testCall["Grok: regression test<br/>full file JSON"]
+  patchCall["Grok: store.py replacement<br/>full file JSON"]
+
+  cli --> ingest --> reason
+  reason -->|function_call| tools
+  tools -->|function_call_output<br/>previous_response_id| reason
+  reason --> root --> testCall --> writeTest --> red --> gate
+  gate -->|no| stop --> report
+  gate -->|yes| patchCall --> writeStore --> green --> report
+
+  class cli,ingest,tools,root,writeTest,red,gate,writeStore,green,stop,report code
+  class reason,testCall,patchCall grok
+  classDef code fill:#e8f1fb,stroke:#1d4e89,color:#10233f
+  classDef grok fill:#fff6e8,stroke:#c2410c,color:#431407,stroke-dasharray: 5 3
 ```
 
-The agent is not part of the first milestone. This document is the target shape. The repo currently contains the payments app, the incident, `reproduce`, and the baseline tests.
+`python -m ledger reproduce` is outside this graph. It runs the timeout-then-retry capture locally and rewrites the incident log. It does not call Grok.
 
 ## Layout
 
@@ -24,7 +48,12 @@ ledger/
   __main__.py                    # python -m ledger
   cli.py
   reproduce.py
-  agent/                         # later: orchestrator, grok_client, tools, prompts
+  agent/
+    grok_client.py             # the only Grok HTTP client
+    investigate.py             # ingest and root-cause phase
+    tools.py                   # read-only tools
+    remediate.py               # test, red pytest, patch, green pytest
+    report.py                  # blast radius and report.md
 incidents/
   INC-1042.json
   logs/INC-1042.jsonl            # written by reproduce
