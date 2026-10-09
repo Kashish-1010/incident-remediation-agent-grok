@@ -1,0 +1,52 @@
+--- a/payments/store.py
++++ b/payments/store.py
+@@ -1,4 +1,4 @@
+-"""Ledger and idempotency. The capture timeout path is the seeded bug."""
++"""Ledger and idempotency for payment capture."""
+ 
+ from uuid import uuid4
+ 
+@@ -61,7 +61,7 @@
+                 payment_id=payment_id,
+                 idempotency_key=idempotency_key,
+             )
+-            return stored, 200
++            return stored["body"], stored["status_code"]
+ 
+         if payment["status"] != "authorized":
+             raise PaymentError(409, f"cannot capture a payment in status {payment['status']}")
+@@ -82,21 +82,29 @@
+             idempotency_key=idempotency_key,
+         )
+ 
+-        # Bug: the timeout path returns before the idempotency record is stored,
+-        # and leaves the payment authorized so a retry debits again.
+         if simulate_timeout:
++            body = {"error": "gateway_timeout", "payment_id": payment_id}
++            status_code = 504
++            self.idempotency[idempotency_key] = {"body": body, "status_code": status_code}
+             log_event(
+                 self.events,
+                 "gateway_timeout",
+                 payment_id=payment_id,
+                 idempotency_key=idempotency_key,
+-                status_code=504,
++                status_code=status_code,
+             )
+-            return {"error": "gateway_timeout", "payment_id": payment_id}, 504
++            log_event(
++                self.events,
++                "idempotency_stored",
++                payment_id=payment_id,
++                idempotency_key=idempotency_key,
++                status_code=status_code,
++            )
++            return body, status_code
+ 
+         payment["status"] = "captured"
+         body = self._view(payment_id)
+-        self.idempotency[idempotency_key] = body
++        self.idempotency[idempotency_key] = {"body": body, "status_code": 200}
+         log_event(
+             self.events,
+             "idempotency_stored",

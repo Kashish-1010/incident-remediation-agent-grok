@@ -1,0 +1,12 @@
+{
+  "hypothesis": "Capture debits the ledger before handling a simulated gateway timeout, then returns 504 without storing the Idempotency-Key or moving the payment out of authorized. A retry with the same key misses the idempotency record and appends a second debit.",
+  "confidence": "high",
+  "files": [
+    "payments/store.py"
+  ],
+  "evidence": [
+    "Log: ledger_debit led_70c69e64 then gateway_timeout 504, then a second capture_started and ledger_debit led_48c45974 for idem_inc_1042 before idempotency_stored.",
+    "store.py: ledger.append and ledger_debit run before the simulate_timeout branch, which returns 504 without writing self.idempotency or setting status to captured.",
+    "store.py comment: timeout path returns before the idempotency record is stored and leaves the payment authorized so a retry debits again."
+  ]
+}

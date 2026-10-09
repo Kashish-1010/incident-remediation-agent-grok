@@ -1,0 +1,148 @@
+{
+  "body": {
+    "background": false,
+    "completed_at": 1791525320,
+    "created_at": 1791525309,
+    "error": null,
+    "frequency_penalty": 0.0,
+    "id": "f9ca44f7-10c9-955e-91ed-59cdc8213dee",
+    "incomplete_details": null,
+    "instructions": null,
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "metadata": {
+      "system_fingerprint": "fp_c60958d81f66f847"
+    },
+    "model": "grok-4.7",
+    "object": "response",
+    "output": [
+      {
+        "encrypted_content": "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",
+        "id": "rs_f9ca44f7-10c9-955e-91ed-59cdc8213dee",
+        "status": "completed",
+        "summary": [
+          {
+            "text": "Investigating the production payments incident. I will reply with a JSON object containing the hypothesis, confidence level, affected files, and evidence.\n\nThe root cause is a race condition in payments/store.py. When the gateway times out, the code returns a 504 error before storing the idempotency record. The payment remains authorized, so a retry debits the customer again.",
+            "type": "summary_text"
+          }
+        ],
+        "type": "reasoning"
+      },
+      {
+        "content": [
+          {
+            "annotations": [],
+            "logprobs": [],
+            "text": "{\"hypothesis\":\"Capture debits the ledger before handling a simulated gateway timeout, then returns 504 without storing the Idempotency-Key or moving the payment out of authorized. A retry with the same key misses the idempotency record and appends a second debit.\",\"confidence\":\"high\",\"files\":[\"payments/store.py\"],\"evidence\":[\"Log: ledger_debit led_70c69e64 then gateway_timeout 504, then a second capture_started and ledger_debit led_48c45974 for idem_inc_1042 before idempotency_stored.\",\"store.py: ledger.append and ledger_debit run before the simulate_timeout branch, which returns 504 without writing self.idempotency or setting status to captured.\",\"store.py comment: timeout path returns before the idempotency record is stored and leaves the payment authorized so a retry debits again.\"]}",
+            "type": "output_text"
+          }
+        ],
+        "id": "msg_f9ca44f7-10c9-955e-91ed-59cdc8213dee",
+        "role": "assistant",
+        "status": "completed",
+        "type": "message"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "presence_penalty": 0.0,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "reasoning": {
+      "effort": "high",
+      "summary": "detailed"
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "status": "completed",
+    "store": true,
+    "temperature": 0.7,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "description": "Read a UTF-8 text file inside the investigation workspace, or the incident log.",
+        "name": "read_file",
+        "parameters": {
+          "properties": {
+            "path": {
+              "description": "Workspace-relative path or the incident log path",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "strict": false,
+        "type": "function"
+      },
+      {
+        "description": "Search text files under the workspace for a literal string. Returns path, line number, and line text.",
+        "name": "search",
+        "parameters": {
+          "properties": {
+            "path": {
+              "description": "Optional directory under the workspace. Defaults to the workspace root.",
+              "type": "string"
+            },
+            "query": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "strict": false,
+        "type": "function"
+      },
+      {
+        "description": "List the names in one directory under the workspace.",
+        "name": "list_dir",
+        "parameters": {
+          "properties": {
+            "path": {
+              "description": "Directory under the workspace. Use . for the workspace root.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "strict": false,
+        "type": "function"
+      }
+    ],
+    "top_logprobs": 0,
+    "top_p": 0.95,
+    "truncation": "disabled",
+    "usage": {
+      "context_details": {
+        "input_tokens": 3709,
+        "output_tokens": 569
+      },
+      "cost_in_usd_ticks": 90560000,
+      "input_tokens": 3709,
+      "input_tokens_details": {
+        "cached_tokens": 1152
+      },
+      "num_server_side_tools_used": 0,
+      "num_sources_used": 0,
+      "output_tokens": 561,
+      "output_tokens_details": {
+        "reasoning_tokens": 375
+      },
+      "total_tokens": 4270
+    },
+    "user": null
+  },
+  "status": 200
+}

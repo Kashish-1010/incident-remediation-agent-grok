@@ -1,0 +1,19 @@
+{
+  "steps": [
+    {
+      "step": "red",
+      "exit_code": 1,
+      "artifact": "pytest-red.txt"
+    },
+    {
+      "step": "patch",
+      "path": "payments/store.py",
+      "artifact": "store.diff"
+    },
+    {
+      "step": "green",
+      "exit_code": 0,
+      "artifact": "pytest-green.txt"
+    }
+  ]
+}

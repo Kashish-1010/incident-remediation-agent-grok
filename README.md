@@ -135,6 +135,12 @@ Under `runs/<id>/`:
 
 `runs/` is gitignored.
 
+## Saved example
+
+`examples/successful-run/` is a sanitized copy of one completed demo, `runs/INC-1042-20261009T055509Z`. It contains the root cause, tool budget, red and green pytest logs, `store.diff`, `sequence.json`, `report.md`, and the first Grok request/response pair (`api/001-*`). The Authorization header in that request is `Bearer ***`.
+
+A live `investigate` run still writes a full private transcript and workspace under `runs/`, which is not committed. The example omits the workspace copy and the later API calls that contain the generated test and the full patched module. Pytest warnings that named this machine's `site-packages` path were replaced with a generic path.
+
 ## Security boundaries
 
 - Tools the model may call: `read_file`, `search`, `list_dir`. At most 3 rounds. Paths must stay in the workspace, except the incident log file.
