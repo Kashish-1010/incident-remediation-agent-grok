@@ -1,4 +1,4 @@
-"""Command line entrypoint. The final remediation report is a later milestone."""
+"""Command line entrypoint for the incident investigation workflow."""
 
 import argparse
 import json
@@ -13,7 +13,10 @@ def main(argv: list[str] | None = None) -> int:
     reproduce_parser = sub.add_parser("reproduce", help="Run the seeded double-debit capture and write the incident log")
     reproduce_parser.add_argument("--log", type=Path, default=None)
     sub.add_parser("check-key", help="Show whether XAI_API_KEY is loaded, without printing it or calling the API")
-    investigate_parser = sub.add_parser("investigate", help="Ingest an incident, find the root cause, prove a failing test, and patch")
+    investigate_parser = sub.add_parser(
+        "investigate",
+        help="Run the full workflow: ingest, root cause, red test, patch, green suite, and report",
+    )
     investigate_parser.add_argument("incident", type=Path)
     remediate_parser = sub.add_parser("remediate", help="Continue a saved run from root_cause.json through the red-green patch")
     remediate_parser.add_argument("run_dir", type=Path)

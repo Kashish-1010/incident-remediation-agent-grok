@@ -48,8 +48,8 @@ One process. Tests use FastAPI's `TestClient`. There is no worker, queue, databa
 | 3. Test | The next Grok call returns `tests/test_inc_1042.py` only | The test file, then `pytest-red.txt`. The patch call has not happened |
 | 4. Patch | A separate Grok call returns `payments/store.py` after the red log exists | `store.diff`. Skipped when the regression test does not fail |
 | 5. Verify | Code runs the full pytest suite | `pytest-green.txt` and `sequence.json`. No repair turn |
-| 6. Blast radius | Code | Changed files, and a fixed note that capture moves money |
-| 7. Report | Code fills a template. The third Grok call supplies the hypothesis paragraph | `report.md` |
+| 6. Blast radius | Code, from the diff and the capture route | Included in `report.md`. Capture moves money. |
+| 7. Report | Code fills a template from the artifacts | `report.md`. No model call. Success is stated only after red, patch, and green. |
 
 The committed payments code stays buggy. Re-running copies a clean tree.
 
@@ -85,7 +85,8 @@ Tool rounds in investigate are capped at 3. Unknown tool names return an error r
 
 - **Test call, then patch call.** The fix is requested only after the regression test fails on the unpatched workspace. `sequence.json` is the red, patch, green record.
 - **Full-file replacements.** A unified diff is the usual way a model patch fails to apply. The tree is small enough to replace two files.
-- **Stop on a surprise result.** A regression test that passes before the patch, or a full suite that fails after it, ends the run as a failure.
+- **Stop on a surprise result.** A regression test that passes before the patch, or a full suite that fails after it, ends the run as a failure. The report says the remediation did not succeed.
+- **Code-owned report.** Blast radius, rollback, and the approval line are written by code from the artifacts. Grok is not asked if its own patch is safe.
 - **No repair turn.** A failed second pytest is the result. Another patch cycle is out of scope.
 - **HTTP, not an SDK.** Saved request and response bodies are the Grok boundary you can open during the walkthrough.
 - **Isolated workspace.** The seeded bug remains the starting point for every run.

@@ -13,7 +13,7 @@ Prototype of a CLI incident-investigation agent for a small payments API. One se
 7. **Workspace.** The run copies the payments tree and tests into `runs/<run-id>/workspace` and edits that copy. The committed bug stays in place.
 8. **Fix and test.** The model may replace only `tests/test_inc_1042.py` and, after that test fails, `payments/store.py`. Code writes the test, runs it, and saves `pytest-red.txt`. A pass, a timeout, or a failure that is not the seeded assertion stops the run before any patch call. The patch is then applied and the full suite is saved as `pytest-green.txt`. `sequence.json` records red, then patch, then green. There is no repair turn. A green failure is reported as failure.
 9. **Verification.** The orchestrator runs `python -m pytest` in a subprocess with a 60-second timeout. The model has no shell tool. A failing second pytest is written into the report and the process exits non-zero.
-10. **Report.** Code fills `runs/<run-id>/report.md` from the phase artifacts: timeline, diff, both pytest results, blast radius (changed files plus a fixed note that capture moves money), and a line that a person must approve before anything ships. Grok contributes only the hypothesis paragraph. A failed pytest is never reported as fixed.
+10. **Report.** Code fills `runs/<run-id>/report.md` from the phase artifacts: incident summary, root cause and confidence, evidence, the red pytest result, files changed and the diff summary, the green pytest result, blast radius, rollback, and a line that a person must approve before anything ships. Grok is not asked whether the patch is safe. The report says remediation succeeded only when `sequence.json` is red exit 1, then the store patch, then green exit 0, with no error file.
 
 ## Non-functional
 

@@ -1,7 +1,7 @@
 """Write a regression test, prove it fails, then replace payments/store.py.
 
-The final remediation report is a later milestone. This phase stops after the
-pytest logs for the red run and the green run.
+The report is written from the artifacts after this phase. It does not ask the model
+whether the patch is safe.
 """
 
 from __future__ import annotations
@@ -26,8 +26,14 @@ def remediate(paths: RunPaths, client: GrokClient, pytest_runner=run_pytest) -> 
     except InvestigationError as exc:
         _write_error(paths, str(exc))
         print(f"remediation failed: {exc}")
+        from ledger.agent.report import write_report
+
+        write_report(paths)
         print(f"artifacts: {paths.run_dir}")
         return 1
+    from ledger.agent.report import write_report
+
+    write_report(paths)
     print(f"artifacts: {paths.run_dir}")
     return 0
 

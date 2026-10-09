@@ -49,6 +49,9 @@ def investigate(
     except InvestigationError as exc:
         (paths.run_dir / "error.json").write_text(json.dumps({"error": str(exc)}, indent=2) + "\n", encoding="utf-8")
         print(f"investigation failed: {exc}")
+        from ledger.agent.report import write_report
+
+        write_report(paths)
         print(f"artifacts: {paths.run_dir}")
         return 1
     (paths.run_dir / "root_cause.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
