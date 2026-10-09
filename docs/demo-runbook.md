@@ -40,7 +40,7 @@ Leave it running. The phases print as they start.
 
 Open `ledger/agent/grok_client.py`. The only HTTP call is `POST https://api.x.ai/v1/responses`. Show `API_URL`, the `Authorization` header, and `_write_transcript`. Say that 401 is not retried and that the transcript stores `Bearer ***`.
 
-Open `ledger/agent/investigate.py` and name the phase order: ingest, investigate with at most three tool rounds, then remediation. Tools are `read_file`, `search`, and `list_dir` in `ledger/agent/tools.py`. A path outside the workspace returns an error tool result. The model has no shell.
+Open `ledger/agent/investigate.py` and name the phase order: ingest, investigate with at most `LEDGER_MAX_TOOL_ROUNDS` tool rounds (default 8), then one no-tool fallback if the model is still calling tools, then remediation. Tools are `read_file`, `search`, and `list_dir` in `ledger/agent/tools.py`. A path outside the workspace returns an error tool result. The model has no shell.
 
 Open `ledger/agent/remediate.py` and show that the test file is written and pytest runs before `_patch_prompt` is sent. If the red exit code is not 1, the patch call does not happen.
 

@@ -8,7 +8,7 @@ Solid nodes are deterministic Python. Dashed nodes are Grok reasoning through `P
 flowchart TD
   cli["CLI<br/>python -m ledger investigate"]
   ingest["Ingest<br/>copy payments/ and tests/<br/>write ingest.json"]
-  tools["Local tools<br/>read_file, search, list_dir<br/>workspace path check, max 3 rounds"]
+  tools["Local tools<br/>read_file, search, list_dir<br/>workspace path check, LEDGER_MAX_TOOL_ROUNDS default 8"]
   root["Save root_cause.json"]
   writeTest["Write tests/test_inc_1042.py<br/>path and size checks"]
   red["pytest the new test<br/>save pytest-red.txt"]
@@ -73,7 +73,7 @@ One process. Tests use FastAPI's `TestClient`. There is no worker, queue, databa
 | Phase | Who decides | Saved artifact |
 | --- | --- | --- |
 | 1. Ingest | Code | Normalized incident and log slice |
-| 2. Investigate | One Grok call, up to 3 tool rounds | Root-cause JSON. The prompt already includes the log and `payments/store.py` |
+| 2. Investigate | One Grok call, up to `LEDGER_MAX_TOOL_ROUNDS` tool rounds (default 8). At the limit, one fresh no-tool call writes the root-cause JSON | `root_cause.json` and `tool-budget.json`. The prompt already includes the log and `payments/store.py` |
 | 3. Test | The next Grok call returns `tests/test_inc_1042.py` only | The test file, then `pytest-red.txt`. The patch call has not happened |
 | 4. Patch | A separate Grok call returns `payments/store.py` after the red log exists | `store.diff`. Skipped when the regression test does not fail |
 | 5. Verify | Code runs the full pytest suite | `pytest-green.txt` and `sequence.json`. No repair turn |

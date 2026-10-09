@@ -55,7 +55,8 @@ def _repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_investigation_runs_tools_then_saves_root_cause(tmp_path: Path) -> None:
+def test_investigation_runs_tools_then_saves_root_cause(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LEDGER_MAX_TOOL_ROUNDS", raising=False)
     repo = _repo(tmp_path)
     client = ScriptedClient(
         [
@@ -83,6 +84,8 @@ def test_investigation_runs_tools_then_saves_root_cause(tmp_path: Path) -> None:
     assert "def capture" in client.calls[1]["input"][0]["output"]
     root = json.loads((repo / "runs" / "INC-1042" / "root_cause.json").read_text(encoding="utf-8"))
     assert root["confidence"] == "high"
+    budget = json.loads((repo / "runs" / "INC-1042" / "tool-budget.json").read_text(encoding="utf-8"))
+    assert budget == {"tool_rounds_used": 1, "tool_round_limit": 8, "fallback_triggered": False}
     assert (repo / "runs" / "INC-1042" / "ingest.json").is_file()
     assert (repo / "runs" / "INC-1042" / "workspace" / "payments" / "store.py").is_file()
     store = (repo / "payments" / "store.py").read_text(encoding="utf-8")
@@ -107,15 +110,61 @@ def test_invalid_json_is_reasked_once(tmp_path: Path) -> None:
     assert "not valid root-cause JSON" in client.calls[1]["input"][0]["content"]
 
 
-def test_fourth_tool_round_stops(tmp_path: Path) -> None:
+def test_budget_exhaustion_requests_json_without_more_tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LEDGER_MAX_TOOL_ROUNDS", "1")
     repo = _repo(tmp_path)
-    call = FunctionCall(name="list_dir", call_id="call_x", arguments='{"path": "."}')
-    client = ScriptedClient([_response(calls=[call], response_id=f"resp_{n}") for n in range(4)])
+    pending = FunctionCall(name="read_file", call_id="call_pending", arguments='{"path": "payments/store.py"}')
+    listed = FunctionCall(name="list_dir", call_id="call_1", arguments='{"path": "."}')
+    client = ScriptedClient(
+        [
+            _response(calls=[listed], response_id="resp_1"),
+            _response(calls=[pending], response_id="resp_2"),
+            _response(
+                text=json.dumps(
+                    {
+                        "hypothesis": "Timeout returns before the idempotency record is stored.",
+                        "confidence": "high",
+                        "files": ["payments/store.py"],
+                        "evidence": ["tool budget fallback"],
+                    }
+                ),
+                response_id="resp_3",
+            ),
+        ]
+    )
+    code = investigate(repo / "incidents" / "INC-1042.json", client=client, repo_root=repo, runs_root=repo / "runs")
+    assert code == 0
+    assert len(client.calls) == 3
+    assert client.calls[1]["previous_response_id"] == "resp_1"
+    assert client.calls[2]["tools"] is None
+    assert client.calls[2]["previous_response_id"] is None
+    assert "tool budget" in client.calls[2]["input"][0]["content"].lower() or "exhausted" in client.calls[2]["input"][0]["content"]
+    assert "payments" in client.calls[2]["input"][0]["content"]
+    executed = [item for item in json.loads((repo / "runs" / "INC-1042" / "investigate.json").read_text()) if "tool" in item]
+    assert [item["tool"] for item in executed] == ["list_dir"]
+    budget = json.loads((repo / "runs" / "INC-1042" / "tool-budget.json").read_text(encoding="utf-8"))
+    assert budget == {"tool_rounds_used": 1, "tool_round_limit": 1, "fallback_triggered": True}
+
+
+def test_invalid_fallback_response_fails_the_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LEDGER_MAX_TOOL_ROUNDS", "1")
+    repo = _repo(tmp_path)
+    call = FunctionCall(name="list_dir", call_id="call_1", arguments='{"path": "."}')
+    client = ScriptedClient(
+        [
+            _response(calls=[call], response_id="resp_1"),
+            _response(calls=[call], response_id="resp_2"),
+            _response(text="not json", response_id="resp_3"),
+            _response(text="still not json", response_id="resp_4"),
+        ]
+    )
     code = investigate(repo / "incidents" / "INC-1042.json", client=client, repo_root=repo, runs_root=repo / "runs")
     assert code == 1
-    assert len(client.calls) == 4
-    error = json.loads((repo / "runs" / "INC-1042" / "error.json").read_text(encoding="utf-8"))
-    assert "3 tool rounds" in error["error"]
+    report = (repo / "runs" / "INC-1042" / "report.md").read_text(encoding="utf-8")
+    assert "Remediation succeeded" not in report
+    assert "invalid" in report.lower()
+    budget = json.loads((repo / "runs" / "INC-1042" / "tool-budget.json").read_text(encoding="utf-8"))
+    assert budget["fallback_triggered"] is True
 
 
 def test_missing_key_does_not_start(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
