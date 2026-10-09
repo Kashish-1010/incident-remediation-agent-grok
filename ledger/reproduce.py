@@ -21,6 +21,7 @@ def reproduce(log_path: Path = DEFAULT_LOG) -> int:
     authorized = client.post(f"/v1/payments/{payment_id}/authorize")
     authorized.raise_for_status()
 
+    # Same key twice: first request forces the 504 path, the retry must not debit again.
     headers = {"Idempotency-Key": IDEMPOTENCY_KEY}
     first = client.post(
         f"/v1/payments/{payment_id}/capture",

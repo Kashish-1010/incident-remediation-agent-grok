@@ -1,1 +1,1 @@
-"""Grok HTTP client. The investigation workflow is a later milestone."""
+"""Investigation agent: Grok client, read-only tools, and the fixed phase runner."""

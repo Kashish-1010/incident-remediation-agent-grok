@@ -121,6 +121,7 @@ class GrokClient:
                 attempt += 1
                 continue
 
+            # A bad key will not succeed on retry. 429 and 5xx retry twice below.
             if response.status_code == 401:
                 self._write_transcript(payload, _error_body(response), response.status_code)
                 raise GrokAuthError("Grok rejected the API key (HTTP 401). Check XAI_API_KEY.")

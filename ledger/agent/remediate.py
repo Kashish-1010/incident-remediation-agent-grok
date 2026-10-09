@@ -58,6 +58,7 @@ def _remediate(paths: RunPaths, client: GrokClient, pytest_runner) -> None:
     test_target.write_text(test_file["content"], encoding="utf-8")
     (paths.run_dir / "regression-test.json").write_text(json.dumps(test_file, indent=2) + "\n", encoding="utf-8")
 
+    # Prove the new test fails on the unpatched store before asking Grok for a fix.
     print("phase: verify-red")
     red_code, red_output = pytest_runner(paths.workspace, [TEST_PATH])
     (paths.run_dir / "pytest-red.txt").write_text(_pytest_log(red_code, red_output), encoding="utf-8")

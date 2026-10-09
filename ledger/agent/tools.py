@@ -57,6 +57,7 @@ class Toolset:
         ]
 
     def execute(self, name: str, arguments: object) -> str:
+        # Unknown names, including write or shell tools, never touch the filesystem.
         if name not in ALLOWED_TOOLS:
             return _error(f"unknown tool: {name}")
         if not isinstance(arguments, dict):

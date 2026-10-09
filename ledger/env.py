@@ -17,6 +17,7 @@ def load_dotenv(path: Path | None = None) -> Path | None:
         name, value = line.split("=", 1)
         name = name.strip()
         value = value.strip().strip('"').strip("'")
+        # A shell export wins over .env so a local override is explicit.
         if name and name not in os.environ:
             os.environ[name] = value
     return env_path

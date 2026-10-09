@@ -157,6 +157,7 @@ def test_timeout_retries_twice_then_fails() -> None:
 
 
 def test_transcript_redacts_the_key(tmp_path: Path) -> None:
+    # The saved request must not contain the bearer token or the raw key.
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,

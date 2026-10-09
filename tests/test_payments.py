@@ -37,6 +37,7 @@ def test_authorize_capture_writes_one_debit(client: TestClient) -> None:
 
 
 def test_second_capture_after_success_is_idempotent(client: TestClient) -> None:
+    # The happy path stores the key. The timeout retry is left for the agent.
     payment_id = _authorized(client, 900)
     headers = {"Idempotency-Key": "idem_once"}
     first = client.post(f"/v1/payments/{payment_id}/capture", headers=headers)

@@ -113,6 +113,7 @@ def run_investigation(client: GrokClient, paths: RunPaths) -> dict:
     rounds = 0
     fallback = False
     while response.function_calls:
+        # Budget is spent: do not run the pending tool call. Ask once, with no tools.
         if rounds >= limit:
             fallback = True
             response = client.create(

@@ -22,8 +22,10 @@ def main(argv: list[str] | None = None) -> int:
     remediate_parser.add_argument("run_dir", type=Path)
     args = parser.parse_args(argv)
     if args.command == "investigate":
+        # Lazy import so check-key does not load FastAPI.
         from ledger.agent.investigate import investigate
 
+        # One command runs root cause, the red-green patch, and the report.
         return investigate(args.incident, continue_to_remediation=True)
     if args.command == "remediate":
         from ledger.agent.grok_client import GrokClient

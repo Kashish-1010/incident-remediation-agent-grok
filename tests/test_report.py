@@ -67,6 +67,7 @@ def test_successful_run_requires_approval_and_states_success(tmp_path: Path) -> 
 
 
 def test_failed_green_suite_is_not_called_a_success(tmp_path: Path) -> None:
+    # A later suite failure must not be described as a finished remediation.
     run = _run(tmp_path)
     (run / "sequence.json").write_text(json.dumps(_sequence(1, 1)), encoding="utf-8")
     (run / "pytest-red.txt").write_text("exit_code: 1\nFAILED tests/test_inc_1042.py\n", encoding="utf-8")

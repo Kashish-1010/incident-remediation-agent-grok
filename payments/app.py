@@ -35,6 +35,7 @@ def create_app() -> FastAPI:
             idempotency_key,
             _timeout_requested(simulate_gateway_timeout),
         )
+        # Non-200 capture bodies are returned as HTTP errors, including the seeded 504.
         if status_code != 200:
             raise HTTPException(status_code=status_code, detail=body)
         return body

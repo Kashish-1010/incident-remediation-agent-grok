@@ -14,6 +14,7 @@ def run_pytest(workspace: Path, arguments: list[str] | None = None, timeout: int
     command = [sys.executable, "-m", "pytest", "-q", *(arguments or [])]
     env = os.environ.copy()
     previous = env.get("PYTHONPATH")
+    # Workspace must win over the installed package so pytest sees the patched copy.
     env["PYTHONPATH"] = str(workspace) if not previous else str(workspace) + os.pathsep + previous
     try:
         completed = subprocess.run(

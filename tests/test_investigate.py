@@ -177,6 +177,7 @@ def test_missing_key_does_not_start(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_tool_rejects_paths_outside_the_workspace(tmp_path: Path) -> None:
+    # ../.env must not be readable. That file holds the API key during a demo.
     repo = _repo(tmp_path)
     workspace = repo / "workspace"
     (workspace / "payments").mkdir(parents=True)

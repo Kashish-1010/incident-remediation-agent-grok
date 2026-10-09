@@ -85,6 +85,7 @@ def test_red_patch_green_sequence(tmp_path: Path) -> None:
 
 
 def test_passing_regression_test_stops_before_the_patch(tmp_path: Path) -> None:
+    # A green test on the original code means we have not proved the bug.
     paths = _paths(tmp_path)
     original = (paths.workspace / "payments" / "store.py").read_text(encoding="utf-8")
     client = ScriptedClient([_file("tests/test_inc_1042.py", "def test_retry():\n    assert True\n")])

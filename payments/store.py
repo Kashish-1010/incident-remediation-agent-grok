@@ -53,6 +53,7 @@ class Store:
             idempotency_key=idempotency_key,
             amount=payment["amount"],
         )
+        # A stored key should replay the first response. The timeout path never stores it.
         stored = self.idempotency.get(idempotency_key)
         if stored is not None:
             log_event(

@@ -93,6 +93,7 @@ def render_report(run_dir: Path) -> str:
 
 
 def _succeeded(sequence: dict, error: dict, run_dir: Path) -> bool:
+    # Success requires the sequence and the pytest logs to agree. Grok is not asked.
     if error:
         return False
     steps = sequence.get("steps")
