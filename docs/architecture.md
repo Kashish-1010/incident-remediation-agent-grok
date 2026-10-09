@@ -2,52 +2,45 @@
 
 A Python CLI runs a fixed investigation of a small FastAPI payments service. The seeded bug is a double debit when capture is retried after a gateway timeout. Grok reasons inside three calls. Python decides the phase order, applies files, runs pytest, and writes the report.
 
-Python owns the sequence and the guardrails. Grok only reasons. The committed payments tree stays buggy. Each run copies it into an isolated workspace and proves the fix there: the new test fails, the patch lands, then the suite passes.
+Solid nodes are deterministic Python. Dashed nodes are Grok reasoning through `POST https://api.x.ai/v1/responses` in `ledger/agent/grok_client.py`. Grok does not choose the next phase. Human review is the last step, after the report.
 
 ```mermaid
-flowchart LR
-  inc["Incident input<br/>logs and payments code"]
+%%{init: {'theme': 'base', 'flowchart': {'nodeSpacing': 32, 'rankSpacing': 40, 'padding': 12}}}%%
+flowchart TD
+  cli["CLI<br/>ledger investigate"]
+  ingest["Ingest<br/>copy payments/ and tests/"]
+  tools["Local tools<br/>read_file, search, list_dir<br/>LEDGER_MAX_TOOL_ROUNDS, default 8"]
+  root["Save root_cause.json"]
+  writeTest["Write tests/test_inc_1042.py"]
+  red["Pytest red"]
+  gate{"Red exit code is 1?"}
+  writeStore["Write payments/store.py"]
+  green["Pytest green"]
+  stop["Stop<br/>error.json, no success claim"]
+  report["Blast radius and report.md"]
+  human["Human review"]
 
-  subgraph orch["Python orchestrator"]
-    own["Phase order<br/>guardrails and pytest"]
-  end
+  reason["Grok: investigate<br/>optional tools, then no-tool fallback"]
+  testCall["Grok: regression test"]
+  patchCall["Grok: store.py replacement"]
 
-  subgraph api["Grok API"]
-    direction TB
-    investigate["Investigate"]
-    testgen["Regression test"]
-    patchgen["Patch"]
-  end
+  cli --> ingest --> reason
+  reason -->|function_call| tools
+  tools -->|function_call_output| reason
+  reason --> root --> testCall --> writeTest --> red --> gate
+  gate -->|no| stop --> report
+  gate -->|yes| patchCall --> writeStore --> green --> report
+  report --> human
 
-  subgraph ws["Isolated workspace"]
-    direction TB
-    red["Red"]
-    patch["Patch"]
-    green["Green"]
-    red --> patch --> green
-  end
-
-  subgraph review["Remediation report"]
-    direction TB
-    report["Report"]
-    human["Human review"]
-    report --> human
-  end
-
-  inc --> own
-  own --> investigate
-  investigate --> testgen --> patchgen
-  own --> red
-  patchgen --> patch
-  green --> report
-
-  class inc,own,red,patch,green,report,human py
-  class investigate,testgen,patchgen grok
-  classDef py fill:#e8f1fb,stroke:#1d4e89,color:#10233f
-  classDef grok fill:#fff6e8,stroke:#c2410c,color:#431407,stroke-dasharray: 5 3
+  class cli,ingest,tools,root,writeTest,red,gate,writeStore,green,stop,report code
+  class reason,testCall,patchCall grok
+  class human review
+  classDef code fill:#f4f7fb,stroke:#3d5a80,color:#1c2838,stroke-width:1px
+  classDef grok fill:#fbf8f3,stroke:#8a6240,color:#3d2c1e,stroke-width:1px,stroke-dasharray: 4 3
+  classDef review fill:#f6f6f4,stroke:#6b6b66,color:#2a2a28,stroke-width:1px
 ```
 
-Artifact names, the tool loop, and the stop-on-failure branches are in the sections below. Investigation may use read-only tools for at most `LEDGER_MAX_TOOL_ROUNDS` rounds (default 8). After that budget, one fresh Grok request with no tools must return the root cause. `python -m ledger reproduce` is outside this graph. It reruns the timeout locally and does not call Grok.
+When the tool budget is spent, pending calls are not run. One fresh Grok request with no tools must return the root cause. `python -m ledger reproduce` is outside this graph. It reruns the timeout locally and does not call Grok.
 
 ## Layout
 
